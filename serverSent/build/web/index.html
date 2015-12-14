@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Chat Server</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="bootstrap/css/estilos.css">
+        
+    </head>
+    <body class="bod"> 
+        
+        <div id="izquierda" >
+            <h1>El Pinshi Chat de Mario</h1>
+            <div class="centrar" >
+                
+            </div>
+            <div class="centrar" >
+                <div >
+                    <h2>Usuario:</h2>
+                    <input type="text"  id="user" placeholder="Nombre de usuario">
+                    <br>
+                </div>
+                <div id="cualquiera">
+                    <h2> Mensajes</h2> 
+                    
+                </div>
+                <div >                     
+                    <textarea  id="mensajes" rows="3" style="width: 500px;" placeholder="Mensaje" readonly></textarea> 
+                </div>
+            </div>
+            <div  >
+                <div class="centrar" >
+                    Server-sent
+                </div>
+
+                <div class="centrar" >
+                    Mensaje:
+                    <!--<button type="button" class="vacio" data-toggle="modal" data-target="#exampleModal" data-whatever="@mdo"><span class="glyphicon glyphicon-paperclip" aria-hidden="true"></span></button>
+                    -->
+
+                    <textarea  id="mensaje" rows="3" placeholder="Mensaje"></textarea>
+                    <br>
+                    <button type="button"  id="enviar">Enviar</button>
+                </div>
+            </div>
+        </div>
+        <div id="derecha">
+            <div class="centrar" >
+                <div>
+                    Agrega un grupo Grupos
+                </div>
+                <div>
+                    <input type="text" id="grupoNombre" placeholder="Nombre del grupo">
+                    <br>
+                    <button type="button" id="enviaGrupo">Enviar</button>
+                    <br>
+                    <br>
+                    <br>
+                    <div >
+                        <h2>Grupos</h2>                        
+                    </div>
+                    <div id="grupos">
+                        <input type='radio' name='grupo' checked onclick='cambio()' value='inicial'/>inicial<br>
+                    </div>
+                </div>
+            </div>
+        </div>
+                  
+        
+        <script>
+            var aux="inicial";
+            function cambio(){
+                var sala;
+                sala=seleccionado();
+                document.getElementById("cualquiera").innerHTML="<h4>Sala: "+sala+"</h4>";
+            }
+            
+            function seleccionado(){//regresa el valor del rio seleccionado
+                var grupo=document.getElementsByName("grupo");
+                for(var i=0;i<grupo.length;i++){
+                    if(grupo[i].type === 'radio' && grupo[i].checked){
+                        sala=grupo[i].value;
+                    }                    
+                }
+                return sala;
+            }
+            
+            var msj=document.getElementById("mensaje");
+            var msjs=document.getElementById("mensajes");
+            var user=document.getElementById("user");
+            var nombreGrupo=document.getElementById("grupoNombre");
+            var eliminar=document.getElementById("otrocoso");
+            
+            
+            
+            
+            
+            var evtSource =new EventSource("http://localhost:8080/serverSent/ChatServlet");
+            
+         /*   setInterval(
+                function(){
+               //     Censo();
+                },10000
+            );*/
+            
+            function Censo(){
+                 var request =new XMLHttpRequest();
+                
+                request.addEventListener('load', function(){
+                    console.log('CENSO!!!');
+                });
+                request.open('POST','http://localhost:8080/serverSent/ChatServlet',true);
+                request.setRequestHeader("Content-type","application/x-www-form-urlencoded; charset=utf-8");
+                
+                request.send("censo=sss");
+            }
+            /*evtSource.onmessage=function(e){
+                console.log(e);
+            };*/
+            
+            evtSource.onmessage=function(e){
+                
+                console.log(e);
+                var data = (e.data);
+              //  if(data.user!=="null" || data.message!=="null"){
+                    var received=data.user+": "+data.message+ "\n";
+                    sala=seleccionado();
+                    console.log("sala seleccionada    "+sala+"  "+data.sala);
+                    if(sala===data.sala){
+                        msjs.innerHTML+=received;   
+                    }              
+              //  }               
+            };
+            
+            evtSource.addEventListener('Censo',function(e){
+                var data = JSON.parse(e.data);
+                console.log(data.censo);
+                
+            });
+            evtSource.addEventListener('eliminar',function(e){
+                console.log(e);
+                var data = JSON.parse(e.data);
+                var l;
+                var grupo=document.getElementById("grupos");
+                
+                var grupo2=document.getElementsByName("grupo");
+                gl=grupo2.length;
+                var grupo3=[];
+                
+                document.getElementsByName("grupo");
+                if(data.eliminar!==aux){
+                    console.log("A eliminar "+data.eliminar+ " "+gl);
+                    for(i=0;i<gl;i++){
+                        grupo3[i]=grupo2[i].value;
+                    }
+                    document.getElementById("grupos").innerHTML="<input type='radio' name='grupo' onclick='cambio()' value='inicial'/>inicial<br>";
+
+                    for(i=0;i<gl;i++){
+                        if(grupo3[i]!=="inicial"&&grupo3[i]!==data.eliminar){
+                            console.log(grupo3[i].innerHTML);
+                            document.getElementById("grupos").innerHTML+="<input type='radio' name='grupo' onclick='cambio()' value='"+grupo3[i]+"'/>"+grupo3[i]+"<br>";                       
+                        }
+
+                    }
+                    aux=data.eliminar;
+                }
+            });
+            
+           evtSource.addEventListener('agregaGrupo',function(e){
+                console.log(e);
+                var data = JSON.parse(e.data);
+                if(data.grupo!=="null"){
+                    document.getElementById("grupos").innerHTML+="<input type='radio' name='grupo' checked onclick='cambio()' value='"+data.grupo+"'/>"+data.grupo+"<br>";
+                }
+                
+            });
+            
+            evtSource.addEventListener('ChangeColor',function(e){
+                var data = JSON.parse(e.data);
+                document.getElementById("mensajes").style.color=data.color;
+                
+            });
+            
+            evtSource.onerror=function(e){
+                alert("EventSource fallido");
+            };
+            
+            
+            var enviaGrupo=document.getElementById("enviaGrupo");
+           
+            enviaGrupo.addEventListener('click',function(){
+                console.log('CLICK!!!');
+                var request =new XMLHttpRequest();
+                request.addEventListener('load', function(){
+                    console.log('MANDAR GRUPO!!!');
+                });
+                request.open('POST','http://localhost:8080/serverSent/ChatServlet',true);
+                request.setRequestHeader("Content-type","application/x-www-form-urlencoded; charset=utf-8");
+                
+                request.send("grupo="+nombreGrupo.value);
+            });
+            
+            var message=document.getElementById("enviar");
+            
+            message.addEventListener('click',function(){
+                var request =new XMLHttpRequest();
+                request.addEventListener('load', function(){
+                    console.log('message sent!');
+                });
+                var grupo=document.getElementsByName("grupo");
+                var sala;
+                for(var i=0;i<grupo.length;i++){
+                    if(grupo[i].type === 'radio' && grupo[i].checked){
+                        sala=grupo[i].value;
+                        console.log('Encuentra grupo');
+                    }                    
+                }
+                
+                request.open('POST','http://localhost:8080/serverSent/ChatServlet',true);
+                request.setRequestHeader("Content-type","application/x-www-form-urlencoded; charset=utf-8");
+                console.log('Envia al servidor!');
+                request.send("text="+msj.value+"&user="+user.value+"&sala="+sala);
+            });
+            
+            </script>
+           
+    </body>
+    
+   
+</html>
